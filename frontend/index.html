@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
+<title>OSINT URL Investigation Platform</title>
+<style>
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #0f1520;
+    --bg-card: #141a27;
+    --bg-card-hover: #1a2133;
+    --border: #1e2d45;
+    --border-bright: #2a3f5f;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #4a5568;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59,130,246,0.15);
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --orange: #f97316;
+    --red: #ef4444;
+    --red-glow: rgba(239,68,68,0.1);
+    --cyan: #06b6d4;
+    --purple: #8b5cf6;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ─── Header ─────────────────────────────────────── */
+  header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .header-nav {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-btn:hover, .nav-btn.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .platform-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ─── Main Layout ─────────────────────────────────── */
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* ─── Investigation Input ─────────────────────────── */
+  .investigate-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .panel-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .url-input::placeholder { color: var(--text-muted); }
+  .url-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+  .investigate-btn {
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 24px;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .investigate-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .investigate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .options-row {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .option-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .option-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ─── Progress / Scanning ─────────────────────────── */
+  .scan-progress {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .scan-progress.visible { display: block; }
+
+  .progress-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cyan);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .progress-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .progress-step {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    transition: all 0.3s;
+  }
+
+  .progress-step.running {
+    border-color: var(--accent);
+    color: var(--text-secondary);
+    background: var(--accent-glow);
+  }
+
+  .progress-step.done {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .step-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-bright);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Results Grid ────────────────────────────────── */
+  .results-container { display: none; }
+  .results-container.visible { display: block; }
+
+  /* ─── Risk Score Hero ─────────────────────────────── */
+  .risk-hero {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .risk-gauge {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    flex-shrink: 0;
+  }
+
+  .risk-gauge svg {
+    transform: rotate(-90deg);
+  }
+
+  .risk-gauge-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(0);
+  }
+
+  .risk-number {
+    font-size: 36px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+
+  .risk-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .risk-details {
+    flex: 1;
+  }
+
+  .risk-url {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    word-break: break-all;
+  }
+
+  .risk-summary {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  .risk-meta {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .risk-meta-item {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .risk-meta-item span {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* ─── Risk Factors Bar ────────────────────────────── */
+  .risk-factors {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .factor-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .factor-row:last-child { border-bottom: none; }
+
+  .factor-category {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    width: 150px;
+    flex-shrink: 0;
+  }
+
+  .factor-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+
+  .factor-bar-wrap {
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  .factor-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .factor-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease;
+  }
+
+  .factor-score {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    width: 40px;
+    text-align: right;
+  }
+
+  /* ─── Module Cards Grid ───────────────────────────── */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .modules-grid { grid-template-columns: 1fr; }
+  }
+
+  .module-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .module-card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-secondary);
+  }
+
+  .module-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+  }
+
+  .module-name {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .module-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 99px;
+    text-transform: uppercase;
+  }
+
+  .badge-ok { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-warn { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .badge-alert { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-info { background: rgba(59,130,246,0.15); color: var(--accent); }
+
+  .module-card-body {
+    padding: 16px;
+  }
+
+  .data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .data-row:last-child { border-bottom: none; }
+
+  .data-key {
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    width: 140px;
+  }
+
+  .data-val {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    text-align: right;
+    word-break: break-all;
+  }
+
+  .data-val.highlight { color: var(--text-primary); font-weight: 600; }
+  .data-val.danger { color: var(--red); }
+  .data-val.warning { color: var(--yellow); }
+  .data-val.success { color: var(--green); }
+
+  /* ─── IOC / Recommendations Panels ──────────────────── */
+  .ioc-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ioc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 1rem;
+  }
+
+  .ioc-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ioc-type {
+    color: var(--text-muted);
+    font-weight: 600;
+    min-width: 80px;
+  }
+
+  .rec-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 1rem;
+  }
+
+  .rec-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .rec-item::before {
+    content: "→";
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ─── History Panel ────────────────────────────────── */
+  .history-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .history-panel.visible { display: block; }
+
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .history-table th {
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .history-table td {
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+  }
+
+  .history-table tr:hover td { background: var(--bg-card-hover); cursor: pointer; }
+
+  .risk-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .pill-low { background: rgba(16,185,129,0.15); color: var(--green); }
+  .pill-medium { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .pill-high { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .pill-critical { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* ─── Section headings ────────────────────────────── */
+  .section-heading {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .section-heading::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── Alerts / Banners ────────────────────────────── */
+  .alert-banner {
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .alert-critical {
+    background: var(--red-glow);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #fca5a5;
+  }
+
+  .alert-warning {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: #fcd34d;
+  }
+
+  /* ─── Empty / Error states ────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+
+  .empty-state-icon { font-size: 48px; margin-bottom: 1rem; opacity: 0.4; }
+  .empty-state-title { font-size: 16px; margin-bottom: 0.5rem; }
+  .empty-state-text { font-size: 13px; }
+
+  /* ─── Copy btn ───────────────────────────────────── */
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 8px;
+    margin-left: auto;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ─── Tabs ───────────────────────────────────────── */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-btn:hover:not(.active) { color: var(--text-secondary); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ─── Loading overlay ─────────────────────────────── */
+  .scan-timer {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 1rem;
+  }
+
+  /* ─── Error state ─────────────────────────────────── */
+  .error-box {
+    background: var(--red-glow);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 1.5rem;
+    color: #fca5a5;
+    font-size: 13px;
+    display: none;
+  }
+  .error-box.visible { display: block; }
+</style>
+</head>
+<body translate="no">
+
+<!-- ─── Header ──────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🔍</div>
+    OSINT URL Platform
+  </div>
+
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showTab('investigate')">🔎 Investigate</button>
+    <button class="nav-btn" onclick="showTab('history')">📋 History</button>
+    <button class="nav-btn" onclick="showTab('stats')">📊 Stats</button>
+  </nav>
+
+  <div class="platform-status">
+    <div class="status-dot"></div>
+    Platform Operational
+  </div>
+</header>
+
+<!-- ─── Main ─────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- INVESTIGATE TAB -->
+  <div id="tab-investigate" class="tab-content active">
+
+    <!-- Input Panel -->
+    <div class="investigate-panel" translate="no">
+      <div class="panel-header">
+        <span style="font-size:20px">🎯</span>
+        <div class="panel-title">URL Investigation</div>
+        <div class="panel-subtitle">OSINT Intelligence Pipeline v1.0</div>
+      </div>
+
+      <div class="input-group">
+        <input type="text" class="url-input" id="urlInput"
+          placeholder="https://suspicious-domain.example.com/path?query=value"
+          autocomplete="off" spellcheck="false"
+          onkeydown="if(event.key==='Enter') { event.preventDefault(); handleInvestigate(event); return false; } return true;" />
+        <button type="button" class="investigate-btn" id="investigateBtn" onclick="handleInvestigate(event); return false;">
+          <span id="btnIcon">🚀</span>
+          <span id="btnText">Investigate</span>
+        </button>
+        <button type="button" class="investigate-btn" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); margin-left: 4px;" onclick="loadExampleUrl(); return false;" title="Carrega URL de exemplo (phishing)">
+          <span>📋</span>
+        </button>
+      </div>
+
+      <div class="options-row">
+        <label class="option-toggle">
+          <input type="checkbox" id="deepScanToggle">
+          🌐 Deep scan (subdomain discovery)
+        </label>
+        <label class="option-toggle">
+          <input type="checkbox" id="mlToggle" checked>
+          🤖 ML phishing classifier
+        </label>
+        <div style="margin-left:auto; font-size:12px; color:var(--text-muted)">
+          Rate limit: 10 scans / min
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Box -->
+    <div class="error-box" id="errorBox">
+      <strong>⚠️ Investigation Error</strong><br>
+      <span id="errorMsg"></span>
+    </div>
+
+    <!-- Scan Progress -->
+    <div class="scan-progress" id="scanProgress">
+      <div class="progress-title">
+        <div class="spinner"></div>
+        Running OSINT Pipeline…
+      </div>
+      <div class="progress-steps">
+        <div class="progress-step" id="step-domain">
+          <div class="step-icon">🏢</div> Domain Intel
+        </div>
+        <div class="progress-step" id="step-dns">
+          <div class="step-icon">🌐</div> DNS Analysis
+        </div>
+        <div class="progress-step" id="step-infra">
+          <div class="step-icon">🔌</div> Infrastructure
+        </div>
+        <div class="progress-step" id="step-threat">
+          <div class="step-icon">🛡️</div> Threat Intel
+        </div>
+        <div class="progress-step" id="step-pattern">
+          <div class="step-icon">🧮</div> Pattern Analysis
+        </div>
+        <div class="progress-step" id="step-ml">
+          <div class="step-icon">🤖</div> ML Classifier
+        </div>
+        <div class="progress-step" id="step-risk">
+          <div class="step-icon">⚖️</div> Risk Scoring
+        </div>
+        <div class="progress-step" id="step-report">
+          <div class="step-icon">📄</div> Report Generation
+        </div>
+      </div>
+      <div class="scan-timer" id="scanTimer">Elapsed: 0.0s</div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-container" id="resultsContainer"></div>
+
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" class="tab-content">
+    <div class="history-panel visible" id="historyPanel">
+      <div class="module-card-header" style="padding:16px">
+        <span style="font-size:18px">📋</span>
+        <div class="module-name">Scan History</div>
+        <button class="copy-btn" onclick="loadHistory()" style="margin-left:auto">↻ Refresh</button>
+      </div>
+      <div id="historyContent">
+        <div class="empty-state">
+          <div class="empty-state-icon">📂</div>
+          <div class="empty-state-title">No scans yet</div>
+          <div class="empty-state-text">Run an investigation to see history</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS TAB -->
+  <div id="tab-stats" class="tab-content">
+    <div id="statsContent">
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <div class="empty-state-title">Loading statistics…</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── Configuration ─────────────────────────────────────────────────────
+const API_BASE = "http://127.0.0.1:8001";  // Backend API server
+
+// Log inicial para debug
+console.log('🚀 OSINT Platform loaded');
+console.log('📍 API Base URL:', API_BASE);
+console.log('Checking backend connectivity...');
+
+// Verifica se o backend está disponível
+fetch(`${API_BASE}/api/health`)
+  .then(r => r.json())
+  .then(d => console.log('✅ Backend is online:', d))
+  .catch(e => console.warn('⚠️ Backend may be offline:', e.message));
+
+// ─── Tab Navigation ─────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'history') loadHistory();
+  if (name === 'stats') loadStats();
+}
+
+// ─── Investigation ───────────────────────────────────────────────────────
+let scanStartTime = null;
+let timerInterval = null;
+let hideProgressTimeouts = {}; // Mapa de timeouts por scan ID
+let stepTimeouts = {};  // Mapa de step timeouts por scan ID
+let currentScanId = null;
+let progressVisibleSince = {}; // Rastreia quando cada progress ficou visível
+
+function cancelAllPendingOperations() {
+  console.log('🛑 Cancelando TODAS as operações pendentes...');
+  
+  // Cancela todos os timeouts e intervals pendentes
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  
+  // Limpa todos os hideProgressTimeouts
+  Object.keys(hideProgressTimeouts).forEach(scanId => {
+    console.log(`  - Cancelando hideProgressTimeout para scan ${scanId}`);
+    clearTimeout(hideProgressTimeouts[scanId]);
+  });
+  hideProgressTimeouts = {};
+  
+  // Limpa todos os stepTimeouts
+  Object.keys(stepTimeouts).forEach(scanId => {
+    console.log(`  - Cancelando ${stepTimeouts[scanId].length} step timeouts para scan ${scanId}`);
+    stepTimeouts[scanId].forEach(t => clearTimeout(t));
+  });
+  stepTimeouts = {};
+  
+  progressVisibleSince = {};
+  console.log('✅ Todas as operações canceladas com sucesso');
+}
+
+function loadExampleUrl() {
+  // Carrega exemplos de URLs para teste
+  const examples = [
+    "https://paypa1-verify-account.online",
+    "https://goog1e-security-verify.com",
+    "https://amazon-update-verify.xyz",
+    "https://github.com"
+  ];
+  
+  // Seleciona aleatoriamente uma URL de exemplo
+  const randomUrl = examples[Math.floor(Math.random() * examples.length)];
+  const urlInput = document.getElementById('urlInput');
+  urlInput.value = randomUrl;
+  urlInput.focus();
+  
+  // Log para debug
+  console.log('📋 Exemplo carregado:', randomUrl);
+}
+
+function handleInvestigate(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  // Se já há um scan em progresso, cancela e começa novo
+  if (currentScanId) {
+    console.log(`⚠️ Cancelando scan anterior (${currentScanId}) para iniciar novo\n`);
+  }
+  
+  startInvestigationAsync();
+  return false;
+}
+
+async function startInvestigationAsync() {
+  console.log('\n' + '='.repeat(70));
+  console.log('🔍 NOVO SCAN INICIADO');
+  console.log('='.repeat(70));
+  
+  // IMPORTANTE: Cancela TUDO antes de começar novo scan
+  cancelAllPendingOperations();
+  
+  // Gera ID único para este scan
+  currentScanId = Date.now();
+  const thisScanId = currentScanId;
+  stepTimeouts[thisScanId] = [];  // Array para este scan
+  
+  console.log(`📌 Scan ID: ${thisScanId}`);
+  console.log(`📌 Todos os scans anteriores foram cancelados\n`);
+  
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) {
+    showError('Please enter a URL');
+    return false;
+  }
+
+  const deepScan = document.getElementById('deepScanToggle').checked;
+  const includeMl = document.getElementById('mlToggle').checked;
+
+  console.log(`📝 URL: ${url}`);
+  console.log(`🔧 Deep Scan: ${deepScan}, ML: ${includeMl}\n`);
+
+  // Reset UI
+  hideResults();
+  hideError();
+  showProgress();
+  setButtonLoading(true);
+
+  // Animate steps - timing mais longo para visualização melhor
+  scanStartTime = Date.now();
+  timerInterval = setInterval(() => {
+    // Só continua se é o scan atual
+    if (currentScanId === thisScanId) {
+      const elapsed = ((Date.now() - scanStartTime) / 1000).toFixed(1);
+      const timerEl = document.getElementById('scanTimer');
+      if (timerEl) {
+        timerEl.textContent = `Elapsed: ${elapsed}s`;
+      }
+    }
+  }, 100);
+
+  // Timing estendido para visualizar melhor o pipeline
+  const stepTimings = [
+    ['step-domain', 600],      // Fase 1: Domain Intel
+    ['step-dns', 1400],        // Fase 1: DNS
+    ['step-pattern', 2200],    // Fase 1: Pattern Analysis
+    ['step-ml', 3200],         // Fase 1: ML Classifier
+    ['step-infra', 4600],      // Fase 2: Infrastructure
+    ['step-threat', 6000],     // Fase 2: Threat Intel
+    ['step-risk', 7400],       // Fase 4: Risk Scoring
+    ['step-report', 8200]      // Fase 5: Report Generation
+  ];
+
+  stepTimings.forEach(([id, delay]) => {
+    const timeoutId = setTimeout(() => {
+      // Só continua se é o scan atual
+      if (currentScanId === thisScanId) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.add('running');
+          const innerTimeout = setTimeout(() => {
+            if (currentScanId === thisScanId && el) {
+              el.classList.add('done');
+            }
+          }, 1000);
+          if (stepTimeouts[thisScanId]) {
+            stepTimeouts[thisScanId].push(innerTimeout);
+          }
+        }
+      }
+    }, delay);
+    if (stepTimeouts[thisScanId]) {
+      stepTimeouts[thisScanId].push(timeoutId);
+    }
+  });
+
+  try {
+    console.log('🚀 Enviando requisição para API...\n');
+    
+    const response = await fetch(`${API_BASE}/api/investigate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, deep_scan: deepScan, include_ml: includeMl })
+    });
+
+    console.log(`📊 Resposta recebida: HTTP ${response.status}`);
+    
+    // Se outro scan foi iniciado enquanto aguardávamos, ignora esta resposta
+    if (currentScanId !== thisScanId) {
+      console.log(`⚠️ IGNORANDO RESPOSTA - Novo scan foi iniciado\n`);
+      return;
+    }
+
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    if (!response.ok) {
+      console.error(`❌ Erro HTTP: ${response.status}`);
+      let errorMsg = `HTTP ${response.status}`;
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const err = JSON.parse(text);
+            errorMsg = err.detail || err.message || errorMsg;
+          } catch {
+            errorMsg = text.substring(0, 200);
+          }
+        }
+      } catch {
+        errorMsg = `Server error: ${response.statusText}`;
+      }
+      throw new Error(errorMsg);
+    }
+
+    const responseText = await response.text();
+    console.log(`📄 Tamanho da resposta: ${responseText.length} bytes`);
+    
+    if (!responseText || responseText.trim().length === 0) {
+      throw new Error('Server returned empty response');
+    }
+
+    try {
+      const report = JSON.parse(responseText);
+      console.log(`✅ Resposta JSON parseada com sucesso\n`);
+      
+      // Só renderiza se ainda é o scan atual
+      if (currentScanId === thisScanId) {
+        console.log(`📊 Renderizando relatório para scan ${thisScanId}...`);
+        hideProgress(thisScanId);
+        renderReport(report);
+        setButtonLoading(false);
+        console.log(`✅ SCAN ${thisScanId} COMPLETO\n`);
+      }
+    } catch (parseErr) {
+      throw new Error(`Invalid JSON from server: ${parseErr.message}`);
+    }
+
+  } catch (err) {
+    // Só mostra erro se ainda é o scan atual
+    if (currentScanId === thisScanId) {
+      const errorMsg = (err && err.message) || 'Investigation failed. Check console for details.';
+      console.error(`\n❌ ERRO NO SCAN ${thisScanId}: ${errorMsg}\n`);
+      hideProgress(thisScanId);
+      showError(errorMsg);
+      setButtonLoading(false);
+    }
+  }
+}
+
+// ─── UI State Helpers ─────────────────────────────────────────────────
+function showProgress() {
+  // Registra quando este progress ficou visível
+  progressVisibleSince[currentScanId] = Date.now();
+  console.log(`📊 [Scan ${currentScanId}] Progress panel exibido`);
+  
+  document.getElementById('scanProgress').classList.add('visible');
+  document.querySelectorAll('.progress-step').forEach(s => {
+    s.classList.remove('running', 'done');
+  });
+}
+
+function hideProgress(scanId) {
+  // Mínimo de 4 SEGUNDOS de visualização para o usuário ver o progress completo
+  const minDuration = 4000;
+  const visibleSince = progressVisibleSince[scanId];
+  
+  // Se progressVisibleSince[scanId] não existe, significa que foi um hideProgress de um scan antigo
+  // Nesse caso, remover imediatamente (não é o scan atual)
+  if (!visibleSince) {
+    console.log(`⚠️ [Scan ${scanId}] hideProgress chamado mas scan não está em progressVisibleSince - removendo imediatamente`);
+    const progressEl = document.getElementById('scanProgress');
+    if (progressEl) {
+      progressEl.classList.remove('visible');
+    }
+    return;
+  }
+  
+  const elapsed = Date.now() - visibleSince;
+  const delay = Math.max(0, minDuration - elapsed);
+  
+  console.log(`⏱️ [Scan ${scanId}] hideProgress: visível há ${elapsed}ms, aguardando mais ${delay}ms (total: ${minDuration}ms)`);
+  
+  // Cancela hideProgress anterior deste scan
+  if (hideProgressTimeouts[scanId]) {
+    console.log(`  - Cancelando timeout anterior do scan ${scanId}`);
+    clearTimeout(hideProgressTimeouts[scanId]);
+  }
+  
+  hideProgressTimeouts[scanId] = setTimeout(() => {
+    // Verifica NOVAMENTE se ainda é o scan atual (proteção extra)
+    if (currentScanId === scanId) {
+      const progressEl = document.getElementById('scanProgress');
+      if (progressEl && progressEl.classList.contains('visible')) {
+        console.log(`✅ [Scan ${scanId}] Progress REMOVIDO após ${minDuration}ms`);
+        progressEl.classList.remove('visible');
+      }
+    } else {
+      console.log(`⚠️ [Scan ${scanId}] Timeout de hideProgress NÃO executado - novo scan em progresso (${currentScanId})`);
+    }
+    delete hideProgressTimeouts[scanId];
+    delete progressVisibleSince[scanId];
+  }, delay);
+}
+
+function hideResults() {
+  const c = document.getElementById('resultsContainer');
+  c.classList.remove('visible');
+  c.innerHTML = '';
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorBox').classList.add('visible');
+  setButtonLoading(false);
+}
+
+function hideError() {
+  document.getElementById('errorBox').classList.remove('visible');
+}
+
+function setButtonLoading(loading) {
+  const btn = document.getElementById('investigateBtn');
+  btn.disabled = loading;
+  document.getElementById('btnIcon').textContent = loading ? '⏳' : '🚀';
+  document.getElementById('btnText').textContent = loading ? 'Scanning…' : 'Investigate';
+  
+  // Se o botão foi re-habilitado (loading = false), cancela qualquer operação pendente
+  // para evitar conflito se o usuário clicar novamente rapidamente
+  if (!loading) {
+    console.log('✅ Botão re-habilitado');
+  }
+}
+
+// ─── Report Renderer ──────────────────────────────────────────────────
+function renderReport(r) {
+  // Proteção: Se for um relatório de um scan antigo, ignorar
+  if (!r.scan_id || r.scan_id !== currentScanId) {
+    console.log(`⚠️ Ignorando renderReport - é de um scan antigo (${r.scan_id}) vs atual (${currentScanId})`);
+    return;
+  }
+  
+  console.log(`\n🎨 Renderizando relatório para scan ${currentScanId}...`);
+  
+  setButtonLoading(false);
+  const container = document.getElementById('resultsContainer');
+  container.classList.add('visible');
+
+  const riskColor = {LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#f97316', CRITICAL: '#ef4444'}[r.risk_level] || '#94a3b8';
+  const score = r.risk_score || 0;
+  const circumference = 2 * Math.PI * 50;
+  const dashOffset = circumference * (1 - score / 100);
+
+  let html = '';
+
+  // ── Blacklist Alert ──
+  if (r.threat_intel?.is_blacklisted) {
+    html += `<div class="alert-banner alert-critical">
+      🚨 <strong>BLACKLISTED</strong> — This URL/domain appears on ${r.threat_intel.blacklist_sources?.join(', ')} threat feeds.
+    </div>`;
+  } else if (r.risk_level === 'HIGH' || r.risk_level === 'CRITICAL') {
+    html += `<div class="alert-banner alert-warning">
+      ⚠️ Elevated risk indicators detected. Exercise caution before interacting with this target.
+    </div>`;
+  }
+
+  // ── Risk Hero ──
+  html += `<div class="risk-hero">
+    <div class="risk-gauge">
+      <svg width="140" height="140" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#1e2d45" stroke-width="10"/>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="${riskColor}" stroke-width="10"
+          stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"
+          stroke-linecap="round" style="transition:stroke-dashoffset 1s ease;filter:drop-shadow(0 0 6px ${riskColor}44)"/>
+      </svg>
+      <div class="risk-gauge-value">
+        <div class="risk-number" style="color:${riskColor}">${Math.round(score)}</div>
+        <div class="risk-label" style="color:${riskColor}">${r.risk_level}</div>
+      </div>
+    </div>
+    <div class="risk-details">
+      <div class="risk-url">🔗 ${r.url}</div>
+      <div class="risk-summary">${r.summary}</div>
+      <div class="risk-meta">
+        <div class="risk-meta-item">🏢 Domain: <span>${r.domain}</span></div>
+        <div class="risk-meta-item">🌐 IP: <span>${r.dns_intel?.primary_ip || 'N/A'}</span></div>
+        <div class="risk-meta-item">⏱️ Duration: <span>${r.scan_duration_ms}ms</span></div>
+        <div class="risk-meta-item">🕐 Scanned: <span>${new Date(r.scan_timestamp).toLocaleTimeString()}</span></div>
+        <div class="risk-meta-item">🆔 Scan ID: <span>#${r.scan_id}</span></div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Risk Factors ──
+  if (r.risk_factors?.length) {
+    html += `<div class="risk-factors">
+      <div class="section-heading">Risk Factor Breakdown</div>`;
+    r.risk_factors.forEach(f => {
+      const pct = Math.min((f.score_contribution / 35) * 100, 100);
+      html += `<div class="factor-row">
+        <div class="factor-category">${f.category}</div>
+        <div class="factor-desc">${f.description}</div>
+        <div class="factor-bar-wrap">
+          <div class="factor-bar-bg">
+            <div class="factor-bar-fill" style="width:${pct}%;background:${riskColor}"></div>
+          </div>
+        </div>
+        <div class="factor-score">+${f.score_contribution.toFixed(1)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── Module Cards Grid ──
+  html += `<div class="modules-grid">`;
+
+  // Domain Intel Card
+  const di = r.domain_intel;
+  if (di) {
+    const ageBadge = di.is_newly_registered ? 'badge-alert' :
+      (di.domain_age_days && di.domain_age_days < 365 ? 'badge-warn' : 'badge-ok');
+    const ageText = di.is_newly_registered ? 'NEW' : (di.domain_age_days ? `${di.domain_age_days}d old` : 'OK');
+    html += `<div class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon">🏢</span>
+        <span class="module-name">Domain Intelligence</span>
+        <span class="module-badge ${ageBadge}">${ageText}</span>
+      </div>
+      <div class="module-card-body">
+        ${dataRow('Domain', di.domain, 'highlight')}
+        ${dataRow('Registrar', di.registrar || 'N/A')}
+        ${dataRow('Created', di.creation_date ? di.creation_date.split('T')[0] : 'N/A')}
+        ${dataRow('Expires', di.expiration_date ? di.expiration_date.split('T')[0] : 'N/A')}
+        ${dataRow('Age', di.domain_age_days ? `${di.domain_age_days} days` : 'Unknown',
+          di.is_newly_registered ? 'danger' : '')}
+        ${dataRow('Privacy Protected', di.privacy_protected ? 'Yes' : 'No',
+          di.privacy_protected ? 'warning' : 'success')}
+        ${dataRow('Country', di.registrant_country || 'N/A')}
+        ${di.error ? dataRow('Error', di.error, 'danger') : ''}
+      </div>
+    </div>`;
+  }
+
+  // DNS Card
+  const dns = r.dns_intel;
+  if (dns) {
+    html += `<div class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon">🌐</span>
+        <span class="module-name">DNS Intelligence</span>
+        <span class="module-badge badge-info">${dns.a_records?.length || 0} IPs</span>
+      </div>
+      <div class="module-card-body">
+        ${dataRow('A Records', dns.a_records?.join(', ') || 'None', 'highlight')}
+        ${dataRow('Name Servers', dns.ns_records?.slice(0,2).join(', ') || 'N/A')}
+        ${dataRow('MX Records', dns.mx_records?.length ? dns.mx_records[0] : 'None')}
+        ${dataRow('ASN', dns.asn || 'N/A')}
+        ${dataRow('ASN Org', dns.asn_org || 'N/A')}
+        ${dataRow('Hosting Provider', dns.hosting_provider || 'N/A')}
+        ${dataRow('Country', dns.country || 'N/A')}
+        ${dataRow('Reverse DNS', dns.reverse_dns || 'N/A')}
+        ${dns.txt_records?.some(t => t.includes('v=spf')) ? dataRow('SPF Record', '✓ Present', 'success') : dataRow('SPF Record', '✗ Missing', 'warning')}
+      </div>
+    </div>`;
+  }
+
+  // Infrastructure Card
+  const infra = r.infrastructure;
+  if (infra) {
+    const sslBadge = infra.ssl_info?.is_valid ? 'badge-ok' : 'badge-alert';
+    const sslText = infra.ssl_info?.is_valid ? 'SSL Valid' : 'SSL Issue';
+    const missingHeaders = infra.security_headers ?
+      Object.entries(infra.security_headers).filter(([,v]) => !v).map(([k]) => k) : [];
+    html += `<div class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon">🔌</span>
+        <span class="module-name">Infrastructure</span>
+        <span class="module-badge ${sslBadge}">${sslText}</span>
+      </div>
+      <div class="module-card-body">
+        ${dataRow('HTTP Status', infra.http_status || 'N/A', infra.http_status === 200 ? 'success' : 'warning')}
+        ${dataRow('Server', infra.server_header || 'Hidden')}
+        ${dataRow('Powered By', infra.powered_by || 'Not disclosed')}
+        ${dataRow('Technologies', infra.technologies?.join(', ') || 'None detected')}
+        ${dataRow('SSL Issuer', infra.ssl_info?.issuer || 'N/A')}
+        ${dataRow('SSL Subject', infra.ssl_info?.subject || 'N/A')}
+        ${dataRow('SSL Expires In', infra.ssl_info?.days_until_expiry != null ? `${infra.ssl_info.days_until_expiry} days` : 'N/A',
+          infra.ssl_info?.days_until_expiry < 30 ? 'warning' : 'success')}
+        ${dataRow('Missing Sec Headers', missingHeaders.length ? `${missingHeaders.length}/6` : '0/6',
+          missingHeaders.length >= 4 ? 'danger' : missingHeaders.length > 0 ? 'warning' : 'success')}
+        ${infra.redirect_chain?.length ? dataRow('Redirect Chain', `${infra.redirect_chain.length} hop(s)`, 'warning') : ''}
+      </div>
+    </div>`;
+  }
+
+  // Threat Intel Card
+  const threat = r.threat_intel;
+  if (threat) {
+    const threatBadge = threat.is_blacklisted ? 'badge-alert' :
+      (threat.threat_score > 40 ? 'badge-warn' : 'badge-ok');
+    const threatText = threat.is_blacklisted ? 'BLACKLISTED' :
+      (threat.threat_score > 40 ? `Score: ${threat.threat_score.toFixed(0)}` : 'Clean');
+    const allIndicators = [
+      ...(threat.phishing_indicators || []),
+      ...(threat.malware_indicators || []),
+      ...(threat.spam_indicators || [])
+    ];
+    html += `<div class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon">🛡️</span>
+        <span class="module-name">Threat Intelligence</span>
+        <span class="module-badge ${threatBadge}">${threatText}</span>
+      </div>
+      <div class="module-card-body">
+        ${dataRow('Blacklisted', threat.is_blacklisted ? '🚨 YES' : '✓ No',
+          threat.is_blacklisted ? 'danger' : 'success')}
+        ${dataRow('Blacklist Sources', threat.blacklist_sources?.join(', ') || 'None')}
+        ${dataRow('Threat Score', `${threat.threat_score.toFixed(0)}/100`,
+          threat.threat_score > 60 ? 'danger' : threat.threat_score > 30 ? 'warning' : 'success')}
+        ${allIndicators.length ? dataRow('Indicators', `${allIndicators.length} signal(s)`, 'warning') : dataRow('Indicators', 'None', 'success')}
+        ${allIndicators.slice(0,3).map(i => dataRow('', '→ ' + i, 'warning')).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Pattern Analysis Card
+  const pat = r.pattern_analysis;
+  if (pat) {
+    const patBadge = pat.brand_impersonation || pat.typosquat_target ? 'badge-alert' :
+      pat.is_high_entropy ? 'badge-warn' : 'badge-ok';
+    const patText = pat.brand_impersonation ? 'IMPERSONATION' :
+      pat.typosquat_target ? 'TYPOSQUAT' : pat.is_high_entropy ? 'HIGH ENTROPY' : 'Clean';
+    html += `<div class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon">🧮</span>
+        <span class="module-name">Pattern Analysis</span>
+        <span class="module-badge ${patBadge}">${patText}</span>
+      </div>
+      <div class="module-card-body">
+        ${dataRow('Entropy Score', pat.entropy_score?.toFixed(3),
+          pat.is_high_entropy ? 'danger' : 'success')}
+        ${dataRow('Brand Impersonation', pat.brand_impersonation || 'None',
+          pat.brand_impersonation ? 'danger' : 'success')}
+        ${dataRow('Typosquatting', pat.typosquat_target || 'None',
+          pat.typosquat_target ? 'danger' : 'success')}
+        ${dataRow('Suspicious TLD', pat.suspicious_tld ? '⚠️ Yes' : 'No',
+          pat.suspicious_tld ? 'warning' : '')}
+        ${dataRow('Numeric Substitution', pat.has_numeric_substitution ? '⚠️ Yes' : 'No',
+          pat.has_numeric_substitution ? 'warning' : '')}
+        ${dataRow('Subdomain Depth', `${pat.subdomain_count} level(s)`,
+          pat.has_excessive_subdomains ? 'warning' : '')}
+        ${dataRow('Suspicious Path', pat.path_suspicious ? '⚠️ Yes' : 'No',
+          pat.path_suspicious ? 'warning' : '')}
+        ${pat.suspicious_keywords?.length ? dataRow('Keywords', pat.suspicious_keywords.slice(0,3).join(', '), 'warning') : ''}
+      </div>
+    </div>`;
+  }
+
+  // ML Card
+  const ml = r.ml_analysis;
+  if (ml) {
+    const mlBadge = ml.classification === 'phishing' ? 'badge-alert' :
+      ml.classification === 'suspicious' ? 'badge-warn' : 'badge-ok';
+    html += `<div class="module-card">
+      <div class="module-card-header">
+        <span class="module-icon">🤖</span>
+        <span class="module-name">ML Phishing Classifier</span>
+        <span class="module-badge ${mlBadge}">${ml.classification?.toUpperCase()}</span>
+      </div>
+      <div class="module-card-body">
+        ${dataRow('Classification', ml.classification?.toUpperCase(),
+          ml.classification === 'phishing' ? 'danger' : ml.classification === 'suspicious' ? 'warning' : 'success')}
+        ${dataRow('Phishing Probability', `${ml.phishing_probability?.toFixed(1)}%`,
+          ml.phishing_probability > 60 ? 'danger' : ml.phishing_probability > 30 ? 'warning' : 'success')}
+        ${dataRow('Confidence', `${(ml.confidence * 100).toFixed(0)}%`)}
+        ${dataRow('Model Version', ml.model_version)}
+        ${ml.features_used?.length ? dataRow('Triggered Features', `${ml.features_used.length} signals`) : ''}
+        ${(ml.features_used || []).slice(0,3).map(f => dataRow('', '→ ' + f, 'warning')).join('')}
+      </div>
+    </div>`;
+  }
+
+  html += `</div>`;  // end modules-grid
+
+  // ── Subdomains ──
+  if (r.subdomains?.subdomains?.length) {
+    html += `<div class="ioc-panel">
+      <div class="section-heading">🌐 Subdomain Discovery (${r.subdomains.total_found} found)</div>
+      <div class="ioc-list">
+        ${r.subdomains.subdomains.slice(0, 20).map(s =>
+          `<div class="ioc-item"><span class="ioc-type">SUBDOMAIN</span>${s}</div>`
+        ).join('')}
+        ${r.subdomains.total_found > 20 ? `<div class="ioc-item" style="color:var(--text-muted)">…and ${r.subdomains.total_found - 20} more</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ── IOCs ──
+  if (r.indicators_of_compromise?.length) {
+    html += `<div class="ioc-panel">
+      <div class="section-heading">💀 Indicators of Compromise</div>
+      <div class="ioc-list">
+        ${r.indicators_of_compromise.map(ioc => {
+          const [type, ...rest] = ioc.split(': ');
+          return `<div class="ioc-item">
+            <span class="ioc-type">${type}</span>${rest.join(': ')}
+            <button class="copy-btn" onclick="copyText('${ioc.replace(/'/g,"\\'")}')">Copy</button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── Recommendations ──
+  if (r.recommendations?.length) {
+    html += `<div class="ioc-panel">
+      <div class="section-heading">✅ Analyst Recommendations</div>
+      <div class="rec-list">
+        ${r.recommendations.map(rec => `<div class="rec-item">${rec}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Animate risk gauge fill
+  setTimeout(() => {
+    const fills = container.querySelectorAll('.factor-bar-fill');
+    fills.forEach(f => {
+      const w = f.style.width;
+      f.style.width = '0%';
+      setTimeout(() => f.style.width = w, 50);
+    });
+  }, 100);
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+function dataRow(key, val, cls = '') {
+  if (!key && !val) return '';
+  return `<div class="data-row">
+    <div class="data-key">${key}</div>
+    <div class="data-val ${cls}">${val ?? 'N/A'}</div>
+  </div>`;
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+// ─── History ──────────────────────────────────────────────────────────
+async function loadHistory() {
+  const el = document.getElementById('historyContent');
+  try {
+    const resp = await fetch(`${API_BASE}/api/history?limit=50`);
+    if (!resp.ok) throw new Error('API unavailable');
+    const records = await resp.json();
+
+    if (!records.length) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">📂</div>
+        <div class="empty-state-title">No scans yet</div>
+        <div class="empty-state-text">Run an investigation to see history</div>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = `<table class="history-table">
+      <thead>
+        <tr>
+          <th>#</th><th>URL</th><th>Domain</th><th>IP</th>
+          <th>Risk Score</th><th>Risk Level</th><th>Scanned At</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${records.map(r => `
+          <tr onclick="loadScan(${r.id})">
+            <td>#${r.id}</td>
+            <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.url}</td>
+            <td>${r.domain || 'N/A'}</td>
+            <td>${r.ip_address || 'N/A'}</td>
+            <td style="color:${riskColor(r.risk_level)}">${r.risk_score?.toFixed(1) || 'N/A'}</td>
+            <td><span class="risk-pill pill-${(r.risk_level || 'low').toLowerCase()}">${r.risk_level || 'N/A'}</span></td>
+            <td style="color:var(--text-muted)">${new Date(r.created_at).toLocaleString()}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Could not load history</div><div class="empty-state-text">${e.message}</div></div>`;
+  }
+}
+
+async function loadScan(id) {
+  try {
+    const resp = await fetch(`${API_BASE}/api/scan/${id}`);
+    if (!resp.ok) throw new Error('Scan not found');
+    const report = await resp.json();
+    showTab({currentTarget: document.querySelectorAll('.nav-btn')[0]}, 'investigate');
+    document.querySelectorAll('.nav-btn')[0].classList.add('active');
+    document.querySelectorAll('.nav-btn')[1].classList.remove('active');
+    document.getElementById('tab-investigate').classList.add('active');
+    document.getElementById('tab-history').classList.remove('active');
+    document.getElementById('urlInput').value = report.url;
+    hideError();
+    // Não precisa de hideProgress aqui - é carregamento do histórico, não investigação ativa
+    document.getElementById('scanProgress').classList.remove('visible');
+    renderReport(report);
+  } catch(e) {
+    alert('Could not load scan: ' + e.message);
+  }
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────
+async function loadStats() {
+  const el = document.getElementById('statsContent');
+  try {
+    const resp = await fetch(`${API_BASE}/api/stats`);
+    if (!resp.ok) throw new Error('API unavailable');
+    const s = await resp.json();
+
+    el.innerHTML = `<div class="modules-grid">
+      ${statCard('📊', 'Total Scans', s.total_scans, 'highlight')}
+      ${statCard('🔴', 'Critical Findings', s.critical_findings, 'danger')}
+      ${statCard('🟠', 'High Findings', s.high_findings, 'warning')}
+      ${statCard('🚨', 'Blacklisted', s.blacklisted_findings, 'danger')}
+    </div>
+    <div class="ioc-panel" style="margin-top:0">
+      <div class="section-heading">Platform Information</div>
+      <div class="data-row"><div class="data-key">Platform Version</div><div class="data-val">${s.platform_version}</div></div>
+      <div class="data-row"><div class="data-key">API Endpoint</div><div class="data-val">${window.location.origin}/api</div></div>
+      <div class="data-row"><div class="data-key">Docs</div><div class="data-val"><a href="/api/docs" target="_blank" style="color:var(--accent)">/api/docs</a></div></div>
+    </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Stats unavailable</div><div class="empty-state-text">Backend not connected</div></div>`;
+  }
+}
+
+function statCard(icon, title, value, cls) {
+  return `<div class="module-card">
+    <div class="module-card-body" style="display:flex;align-items:center;gap:1rem;padding:1.5rem">
+      <div style="font-size:32px">${icon}</div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">${title}</div>
+        <div style="font-size:32px;font-weight:800;font-family:var(--font-mono)" class="data-val ${cls}">${value}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function riskColor(level) {
+  return {LOW:'#10b981',MEDIUM:'#f59e0b',HIGH:'#f97316',CRITICAL:'#ef4444'}[level] || '#94a3b8';
+}
+
+// ─── Global Event Listeners ──────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  // Prevent default form submission on Enter key in input fields
+  if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+    if (e.target.id === 'urlInput') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleInvestigate(e);
+      return false;
+    }
+  }
+}, true);
+
+// ─── Demo mode (if backend unavailable) ──────────────────────────────
+// The platform gracefully degrades with empty states when the API is offline.
+</script>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+# OSINT URL Investigation Platform — Python Dependencies
+
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# Data validation
+pydantic==2.8.2
+pydantic-settings==2.4.0
+
+# Database
+sqlalchemy==2.0.35
+
+# OSINT / Network intelligence
+python-whois==0.9.4
+dnspython==2.6.1
+requests==2.32.3
+urllib3==2.2.3
+
+# Security
+certifi==2024.8.30
+
+# Optional ML (Phase 2)
+# scikit-learn==1.5.2
+# joblib==1.4.2
+# numpy==2.1.1
+
+# Development
+python-dotenv==1.0.1
